@@ -1,4 +1,18 @@
-// Shared types for ratios
+// ─────────────────────────────────────────────────────────────────
+//  ratios.ts — Vibrant palette, category-mapped
+//
+//  Income        → Vermillion #E8613C  /  Fuchsia  #EC4899
+//  Valuation     → Azure      #3B82F6  /  Indigo   #6366F1
+//  Profitability → Amber      #F0A500  /  Jade     #10B981
+//  Cash Flow     → Emerald    #22C55E
+//  Return        → Violet     #A855F7  /  Jade     #10B981
+//  Efficiency    → Indigo     #6366F1
+//  Leverage      → Gold       #EAB308
+//  Debt          → Teal       #14B8A6
+//  Performance   → Sky        #0EA5E9
+//  Risk          → Rose       #F43F5E
+// ─────────────────────────────────────────────────────────────────
+
 export type RatioImportance = "Critical" | "High" | "Medium";
 
 export type RatioCategory =
@@ -13,7 +27,6 @@ export type RatioCategory =
   | "Performance"
   | "Leverage";
 
-// List data used for the ratios list screen
 export interface RealEstateRatio {
   id: number;
   title: string;
@@ -21,7 +34,6 @@ export interface RealEstateRatio {
   formula: string;
   category: RatioCategory;
   importance: RatioImportance;
-  // Ionicons uses string names for icons
   icon: any;
   color: string;
   details: string;
@@ -37,7 +49,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Income",
     importance: "High",
     icon: "trending-up",
-    color: "#4F46E5",
+    color: "#E8613C", // Vermillion
     details: "Measures the basic return before expenses. Higher is better.",
     isLiked: false,
   },
@@ -50,7 +62,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Income",
     importance: "High",
     icon: "trending-down",
-    color: "#10B981",
+    color: "#EC4899", // Fuchsia
     details: "Accounts for operating expenses. More accurate than gross yield.",
     isLiked: false,
   },
@@ -62,7 +74,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Valuation",
     importance: "Medium",
     icon: "resize",
-    color: "#F59E0B",
+    color: "#3B82F6", // Azure
     details: "Useful for comparing properties in same area.",
     isLiked: false,
   },
@@ -74,7 +86,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Income",
     importance: "Medium",
     icon: "home",
-    color: "#8B5CF6",
+    color: "#E8613C", // Vermillion
     details: "Helps compare rental rates across different sized properties.",
     isLiked: false,
   },
@@ -86,7 +98,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Profitability",
     importance: "High",
     icon: "cash",
-    color: "#EF4444",
+    color: "#F0A500", // Amber
     details: "Key metric for evaluating property profitability.",
     isLiked: false,
   },
@@ -98,7 +110,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Cash Flow",
     importance: "Critical",
     icon: "water",
-    color: "#06B6D4",
+    color: "#22C55E", // Emerald
     details: "Actual cash generated each month.",
     isLiked: false,
   },
@@ -110,7 +122,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Efficiency",
     importance: "Medium",
     icon: "speedometer",
-    color: "#84CC16",
+    color: "#6366F1", // Indigo
     details: "Lower ratio indicates better efficiency.",
     isLiked: false,
   },
@@ -122,7 +134,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Valuation",
     importance: "High",
     icon: "pie-chart",
-    color: "#EC4899",
+    color: "#3B82F6", // Azure
     details: "Used to compare different investment opportunities.",
     isLiked: false,
   },
@@ -134,7 +146,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Return",
     importance: "High",
     icon: "wallet",
-    color: "#14B8A6",
+    color: "#A855F7", // Violet
     details: "Measures return on actual cash outlay.",
     isLiked: false,
   },
@@ -146,7 +158,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Leverage",
     importance: "High",
     icon: "scale",
-    color: "#F97316",
+    color: "#EAB308", // Gold
     details: "Lower LTV means less risk for lenders.",
     isLiked: false,
   },
@@ -158,7 +170,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Debt",
     importance: "Critical",
     icon: "shield-checkmark",
-    color: "#8B5CF6",
+    color: "#14B8A6", // Teal
     details: "Lenders require minimum 1.2-1.25 ratio.",
     isLiked: false,
   },
@@ -170,7 +182,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Performance",
     importance: "Medium",
     icon: "people",
-    color: "#3B82F6",
+    color: "#0EA5E9", // Sky
     details: "Higher occupancy means more stable income.",
     isLiked: false,
   },
@@ -182,7 +194,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Performance",
     importance: "Medium",
     icon: "home-outline",
-    color: "#6366F1",
+    color: "#0EA5E9", // Sky
     details: "Opposite of occupancy rate. Lower is better.",
     isLiked: false,
   },
@@ -194,7 +206,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Valuation",
     importance: "Medium",
     icon: "timer",
-    color: "#A855F7",
+    color: "#6366F1", // Indigo
     details: "Lower multiplier suggests better value.",
     isLiked: false,
   },
@@ -206,7 +218,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Debt",
     importance: "Medium",
     icon: "arrow-up",
-    color: "#10B981",
+    color: "#14B8A6", // Teal
     details: "Measures lender's risk. Higher is better.",
     isLiked: false,
   },
@@ -218,7 +230,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Risk",
     importance: "High",
     icon: "warning",
-    color: "#F59E0B",
+    color: "#F43F5E", // Rose
     details: "Lower than 100% means positive cash flow.",
     isLiked: false,
   },
@@ -230,7 +242,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Valuation",
     importance: "Medium",
     icon: "calculator",
-    color: "#EC4899",
+    color: "#3B82F6", // Azure
     details: "Quick valuation metric for rental properties.",
     isLiked: false,
   },
@@ -242,7 +254,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Return",
     importance: "High",
     icon: "rocket",
-    color: "#8B5CF6",
+    color: "#A855F7", // Violet
     details: "Overall profitability including appreciation.",
     isLiked: false,
   },
@@ -254,7 +266,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Return",
     importance: "High",
     icon: "analytics",
-    color: "#3B82F6",
+    color: "#10B981", // Jade
     details: "Accounts for time value of money.",
     isLiked: false,
   },
@@ -266,7 +278,7 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Efficiency",
     importance: "Medium",
     icon: "stats-chart",
-    color: "#EF4444",
+    color: "#6366F1", // Indigo
     details: "Lower ratio indicates efficient management.",
     isLiked: false,
   },
@@ -278,13 +290,12 @@ export const realEstateRatios: RealEstateRatio[] = [
     category: "Profitability",
     importance: "Medium",
     icon: "bar-chart",
-    color: "#84CC16",
+    color: "#F0A500", // Amber
     details: "Measures profitability after direct costs.",
     isLiked: false,
   },
 ];
 
-// Configuration for calculator inputs per ratio
 export interface CalculateRatiosProps {
   id: number;
   title: string;
@@ -307,12 +318,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Income",
     importance: "High",
     icon: "trending-up",
-    color: "#4F46E5",
+    color: "#E8613C",
     details: "Measures the basic return before expenses.",
-    inputValues: {
-      annualRentalIncome: 0,
-      propertyPrice: 0,
-    },
+    inputValues: { annualRentalIncome: 0, propertyPrice: 0 },
   },
   {
     id: 2,
@@ -322,13 +330,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Income",
     importance: "High",
     icon: "trending-down",
-    color: "#10B981",
+    color: "#EC4899",
     details: "More accurate than gross yield.",
-    inputValues: {
-      annualRentalIncome: 0,
-      annualExpenses: 0,
-      propertyPrice: 0,
-    },
+    inputValues: { annualRentalIncome: 0, annualExpenses: 0, propertyPrice: 0 },
   },
   {
     id: 3,
@@ -338,12 +342,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Valuation",
     importance: "Medium",
     icon: "resize",
-    color: "#F59E0B",
+    color: "#3B82F6",
     details: "Useful for comparing similar properties.",
-    inputValues: {
-      propertyPrice: 0,
-      totalArea: 0,
-    },
+    inputValues: { propertyPrice: 0, totalArea: 0 },
   },
   {
     id: 4,
@@ -353,12 +354,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Income",
     importance: "Medium",
     icon: "home",
-    color: "#8B5CF6",
+    color: "#E8613C",
     details: "Helps compare rental prices.",
-    inputValues: {
-      monthlyRent: 0,
-      totalArea: 0,
-    },
+    inputValues: { monthlyRent: 0, totalArea: 0 },
   },
   {
     id: 5,
@@ -368,12 +366,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Profitability",
     importance: "High",
     icon: "cash",
-    color: "#EF4444",
+    color: "#F0A500",
     details: "Key profitability metric.",
-    inputValues: {
-      annualRentalIncome: 0,
-      operatingExpenses: 0,
-    },
+    inputValues: { annualRentalIncome: 0, operatingExpenses: 0 },
   },
   {
     id: 6,
@@ -383,7 +378,7 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Cash Flow",
     importance: "Critical",
     icon: "water",
-    color: "#06B6D4",
+    color: "#22C55E",
     details: "Actual money in your pocket.",
     inputValues: {
       annualRentalIncome: 0,
@@ -399,12 +394,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Efficiency",
     importance: "Medium",
     icon: "speedometer",
-    color: "#84CC16",
+    color: "#6366F1",
     details: "Lower means better efficiency.",
-    inputValues: {
-      operatingExpenses: 0,
-      annualRentalIncome: 0,
-    },
+    inputValues: { operatingExpenses: 0, annualRentalIncome: 0 },
   },
   {
     id: 8,
@@ -414,13 +406,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Valuation",
     importance: "High",
     icon: "pie-chart",
-    color: "#EC4899",
+    color: "#3B82F6",
     details: "Used to compare investments.",
-    inputValues: {
-      annualRentalIncome: 0,
-      annualExpenses: 0,
-      propertyValue: 0,
-    },
+    inputValues: { annualRentalIncome: 0, annualExpenses: 0, propertyValue: 0 },
   },
   {
     id: 9,
@@ -430,7 +418,7 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Return",
     importance: "High",
     icon: "wallet",
-    color: "#14B8A6",
+    color: "#A855F7",
     details: "Shows return on your own money.",
     inputValues: {
       annualRentalIncome: 0,
@@ -447,12 +435,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Leverage",
     importance: "High",
     icon: "scale",
-    color: "#F97316",
+    color: "#EAB308",
     details: "Lower means less lender risk.",
-    inputValues: {
-      loanAmount: 0,
-      propertyValue: 0,
-    },
+    inputValues: { loanAmount: 0, propertyValue: 0 },
   },
   {
     id: 11,
@@ -462,7 +447,7 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Debt",
     importance: "Critical",
     icon: "shield-checkmark",
-    color: "#8B5CF6",
+    color: "#14B8A6",
     details: "Lenders usually require ≥ 1.2",
     inputValues: {
       annualRentalIncome: 0,
@@ -478,12 +463,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Performance",
     importance: "Medium",
     icon: "people",
-    color: "#3B82F6",
+    color: "#0EA5E9",
     details: "Higher means stable income.",
-    inputValues: {
-      daysRented: 0,
-      totalDays: 0,
-    },
+    inputValues: { daysRented: 0, totalDays: 0 },
   },
   {
     id: 13,
@@ -493,12 +475,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Performance",
     importance: "Medium",
     icon: "home-outline",
-    color: "#6366F1",
+    color: "#0EA5E9",
     details: "Lower is better.",
-    inputValues: {
-      daysVacant: 0,
-      totalDays: 0,
-    },
+    inputValues: { daysVacant: 0, totalDays: 0 },
   },
   {
     id: 14,
@@ -508,12 +487,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Valuation",
     importance: "Medium",
     icon: "timer",
-    color: "#A855F7",
+    color: "#6366F1",
     details: "Lower indicates better value.",
-    inputValues: {
-      propertyPrice: 0,
-      annualRentalIncome: 0,
-    },
+    inputValues: { propertyPrice: 0, annualRentalIncome: 0 },
   },
   {
     id: 15,
@@ -523,13 +499,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Debt",
     importance: "Medium",
     icon: "arrow-up",
-    color: "#10B981",
+    color: "#14B8A6",
     details: "Measures lender risk.",
-    inputValues: {
-      annualRentalIncome: 0,
-      annualExpenses: 0,
-      loanAmount: 0,
-    },
+    inputValues: { annualRentalIncome: 0, annualExpenses: 0, loanAmount: 0 },
   },
   {
     id: 16,
@@ -539,7 +511,7 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Risk",
     importance: "High",
     icon: "warning",
-    color: "#F59E0B",
+    color: "#F43F5E",
     details: "Below 100% means positive cash flow.",
     inputValues: {
       annualRentalIncome: 0,
@@ -555,12 +527,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Valuation",
     importance: "Medium",
     icon: "calculator",
-    color: "#EC4899",
+    color: "#3B82F6",
     details: "Quick screening metric.",
-    inputValues: {
-      monthlyRent: 0,
-      propertyPrice: 0,
-    },
+    inputValues: { monthlyRent: 0, propertyPrice: 0 },
   },
   {
     id: 18,
@@ -570,12 +539,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Return",
     importance: "High",
     icon: "rocket",
-    color: "#8B5CF6",
+    color: "#A855F7",
     details: "Simplified ROI (cash-based).",
-    inputValues: {
-      annualCashFlow: 0,
-      cashInvested: 0,
-    },
+    inputValues: { annualCashFlow: 0, cashInvested: 0 },
   },
   {
     id: 19,
@@ -585,12 +551,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Return",
     importance: "High",
     icon: "analytics",
-    color: "#3B82F6",
+    color: "#10B981",
     details: "Advanced metric considering time value of money.",
-    inputValues: {
-      cashFlows: [],
-      initialInvestment: 0,
-    },
+    inputValues: { cashFlows: [], initialInvestment: 0 },
   },
   {
     id: 20,
@@ -600,12 +563,9 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Efficiency",
     importance: "Medium",
     icon: "stats-chart",
-    color: "#EF4444",
+    color: "#6366F1",
     details: "Lower indicates efficient management.",
-    inputValues: {
-      operatingExpenses: 0,
-      propertyValue: 0,
-    },
+    inputValues: { operatingExpenses: 0, propertyValue: 0 },
   },
   {
     id: 21,
@@ -615,11 +575,8 @@ export const CalculateRatiosPropsArray: CalculateRatiosProps[] = [
     category: "Profitability",
     importance: "Medium",
     icon: "bar-chart",
-    color: "#84CC16",
+    color: "#F0A500",
     details: "Measures profitability after direct costs.",
-    inputValues: {
-      grossProfit: 0,
-      revenue: 0,
-    },
+    inputValues: { grossProfit: 0, revenue: 0 },
   },
 ];
