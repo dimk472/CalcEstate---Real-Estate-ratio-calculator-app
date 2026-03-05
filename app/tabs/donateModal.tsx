@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 
 import {
@@ -15,6 +16,7 @@ import {
     View,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
+import { useTheme } from "../ThemeContext";
 
 const { width } = Dimensions.get("window");
 
@@ -31,25 +33,16 @@ const CRYPTO_ADDRESSES = {
 type CryptoType = "BTC" | "ETH" | "SOL" | "USDC" | "USDT" | "BNB";
 
 export default function DonateModalScreen() {
+    const { C, isDark } = useTheme();
+    const styles = makeStyles(C);
     const [selectedCrypto, setSelectedCrypto] = useState<CryptoType | null>(null);
 
-    const handleDonate = (type: string, url?: string) => {
+    const handleDonate = (type: string) => {
         if (type === "paypal") {
-            Linking.openURL(
-                "https://paypal.me/dimkaza"
-            );
-        } else if (type === "stripe") {
-            Linking.openURL("https://buy.stripe.com/YOUR_LINK");
-        } else if (type === "googlepay") {
-            Linking.openURL(
-                "https://pay.google.com/gp/w/u/0/home/paymentmethods"
-            );
+            Linking.openURL("https://paypal.me/dimkaza");
         } else if (type.startsWith("crypto_")) {
             const crypto = type.replace("crypto_", "") as CryptoType;
             setSelectedCrypto(crypto);
-        }
-        if (url) {
-            Linking.openURL(url);
         }
     };
 
@@ -116,7 +109,7 @@ export default function DonateModalScreen() {
                     style={styles.backButton}
                     onPress={() => setSelectedCrypto(null)}
                 >
-                    <Ionicons name="arrow-back" size={20} color="#1E293B" />
+                    <Ionicons name="arrow-back" size={20} color={C.text0} />
                     <Text style={styles.backText}>Back</Text>
                 </TouchableOpacity>
 
@@ -157,7 +150,7 @@ export default function DonateModalScreen() {
                     </View>
 
                     <View style={styles.warningContainer}>
-                        <Ionicons name="information-circle" size={18} color="#475569" />
+                        <Ionicons name="information-circle" size={18} color={C.text2} />
                         <Text style={styles.warningText}>
                             Only send {crypto.name} to this address
                         </Text>
@@ -169,7 +162,7 @@ export default function DonateModalScreen() {
 
     const paymentMethods = [
         {
-            section: "Traditional",
+            section: "Support Methods",
             methods: [
                 {
                     id: "paypal",
@@ -177,22 +170,10 @@ export default function DonateModalScreen() {
                     icon: "logo-paypal" as const,
                     color: "#003087",
                 },
-                {
-                    id: "stripe",
-                    name: "Stripe",
-                    icon: "card" as const,
-                    color: "#635BFF",
-                },
-                {
-                    id: "googlepay",
-                    name: "Google Pay",
-                    icon: "logo-google" as const,
-                    color: "#4285F4",
-                },
             ],
         },
         {
-            section: "Crypto",
+            section: "Cryptocurrency",
             methods: [
                 {
                     id: "crypto_BTC",
@@ -236,6 +217,8 @@ export default function DonateModalScreen() {
 
     return (
         <View style={styles.container}>
+            <StatusBar style={isDark ? "light" : "dark"} />
+
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerLeft} />
@@ -244,17 +227,17 @@ export default function DonateModalScreen() {
                     onPress={() => router.back()}
                     style={styles.headerButton}
                 >
-                    <Ionicons name="close" size={24} color="#000" />
+                    <Ionicons name="close" size={24} color={C.text0} />
                 </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 {!selectedCrypto ? (
                     <>
-                        <Text style={styles.greeting}>👋</Text>
-                        <Text style={styles.title}>Support the Creator</Text>
+                        <Text style={styles.greeting}>☕️</Text>
+                        <Text style={styles.title}>Buy me a coffee</Text>
                         <Text style={styles.subtitle}>
-                            Choose your preferred way to support our work
+                            Support the development of this app
                         </Text>
 
                         <View style={styles.methodsContainer}>
@@ -298,7 +281,7 @@ export default function DonateModalScreen() {
 
                         <View style={styles.footer}>
                             <View style={styles.securityBadge}>
-                                <Ionicons name="shield-checkmark" size={16} color="#64748B" />
+                                <Ionicons name="shield-checkmark" size={16} color={C.text2} />
                                 <Text style={styles.securityText}>Secure & Encrypted</Text>
                             </View>
                         </View>
@@ -311,10 +294,10 @@ export default function DonateModalScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: C.bg0,
     },
     header: {
         flexDirection: "row",
@@ -323,7 +306,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 56,
         paddingBottom: 12,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: C.bg0,
     },
     headerLeft: {
         width: 40,
@@ -335,14 +318,16 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: "#F8F8F8",
+        backgroundColor: C.bg2,
         justifyContent: "center",
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     headerTitle: {
         fontSize: 16,
         fontWeight: "500",
-        color: "#000",
+        color: C.text0,
         letterSpacing: -0.3,
     },
     scrollView: {
@@ -360,14 +345,14 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: "600",
-        color: "#000",
+        color: C.text0,
         textAlign: "center",
         letterSpacing: -0.5,
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 15,
-        color: "#666",
+        color: C.text1,
         textAlign: "center",
         paddingHorizontal: 40,
         lineHeight: 22,
@@ -382,7 +367,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 14,
         fontWeight: "500",
-        color: "#94A3B8",
+        color: C.text2,
         marginBottom: 14,
         letterSpacing: 0.3,
         textTransform: "uppercase",
@@ -395,12 +380,12 @@ const styles = StyleSheet.create({
     methodCard: {
         width: (width - 64) / 3,
         aspectRatio: 1,
-        backgroundColor: "#F8F8F8",
+        backgroundColor: C.bg1,
         borderRadius: 20,
         justifyContent: "center",
         alignItems: "center",
         borderWidth: 1,
-        borderColor: "#F0F0F0",
+        borderColor: C.border0,
     },
     methodIconContainer: {
         width: 48,
@@ -417,7 +402,7 @@ const styles = StyleSheet.create({
     methodName: {
         fontSize: 13,
         fontWeight: "500",
-        color: "#1E293B",
+        color: C.text0,
     },
     footer: {
         alignItems: "center",
@@ -427,15 +412,17 @@ const styles = StyleSheet.create({
     securityBadge: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#F8F8F8",
+        backgroundColor: C.bg1,
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 30,
         gap: 6,
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     securityText: {
         fontSize: 13,
-        color: "#64748B",
+        color: C.text2,
         fontWeight: "400",
     },
     // Crypto Detail Styles
@@ -447,22 +434,26 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 24,
         alignSelf: "flex-start",
-        backgroundColor: "#F8F8F8",
+        backgroundColor: C.bg2,
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 30,
         gap: 4,
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     backText: {
         fontSize: 15,
-        color: "#1E293B",
+        color: C.text0,
         fontWeight: "500",
     },
     cryptoCard: {
-        backgroundColor: "#F8F8F8",
+        backgroundColor: C.bg1,
         borderRadius: 32,
         padding: 24,
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     cryptoIconWrapper: {
         width: 96,
@@ -479,7 +470,7 @@ const styles = StyleSheet.create({
     cryptoTitle: {
         fontSize: 22,
         fontWeight: "600",
-        color: "#000",
+        color: C.text0,
         letterSpacing: -0.3,
         marginBottom: 24,
     },
@@ -501,14 +492,16 @@ const styles = StyleSheet.create({
     },
     addressWrapper: {
         width: "100%",
-        backgroundColor: "#FFFFFF",
+        backgroundColor: C.bg0,
         borderRadius: 20,
         padding: 16,
         marginBottom: 16,
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     addressLabel: {
         fontSize: 12,
-        color: "#94A3B8",
+        color: C.text2,
         marginBottom: 8,
         fontWeight: "500",
         textTransform: "uppercase",
@@ -522,7 +515,7 @@ const styles = StyleSheet.create({
     addressText: {
         flex: 1,
         fontSize: 14,
-        color: "#1E293B",
+        color: C.text0,
         fontFamily: "monospace",
     },
     copyButton: {
@@ -535,15 +528,17 @@ const styles = StyleSheet.create({
     warningContainer: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#F1F5F9",
+        backgroundColor: C.bg2,
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 30,
         gap: 8,
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     warningText: {
         fontSize: 13,
-        color: "#475569",
+        color: C.text1,
         fontWeight: "400",
     },
 });
