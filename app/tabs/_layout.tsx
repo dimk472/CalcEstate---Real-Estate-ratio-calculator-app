@@ -8,6 +8,7 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../ThemeContext';
 
 /* ------------------ Animated Tab Icon ------------------ */
 type TabIconProps = {
@@ -24,7 +25,7 @@ const AnimatedTabIcon = ({ name, color, size, focused }: TabIconProps) => {
     useEffect(() => {
         scale.value = withTiming(focused ? 1 : 1, { duration: 200 });
         translateY.value = withTiming(focused ? -2 : 0, { duration: 200 });
-    }, [focused]);
+    }, [focused, scale, translateY]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [
@@ -44,6 +45,7 @@ const AnimatedTabIcon = ({ name, color, size, focused }: TabIconProps) => {
 /* ------------------ Tabs Layout ------------------ */
 const TabsLayout = () => {
     const insets = useSafeAreaInsets();
+    const { C } = useTheme();
 
     return (
         <Tabs
@@ -51,10 +53,10 @@ const TabsLayout = () => {
                 headerShown: false,
                 tabBarShowLabel: false,
                 tabBarStyle: {
-                    height: 43 + Math.max(insets.bottom, 10), // πιο κομψό
-                    backgroundColor: "#000",
+                    height: 35 + Math.max(insets.bottom, 8), // πιο κομψό
+                    backgroundColor: C.bg0,
                     borderTopWidth: 1,
-                    borderTopColor: "#111",
+                    borderTopColor: C.border0,
                     elevation: 0,
                     shadowOpacity: 0,
                     paddingBottom: Math.max(insets.bottom, 10), // πιο κομψό
@@ -68,8 +70,8 @@ const TabsLayout = () => {
                     alignItems: "center",
                     paddingVertical: 8,
                 },
-                tabBarActiveTintColor: "#fff",
-                tabBarInactiveTintColor: "#979797",
+                tabBarActiveTintColor: C.text0,
+                tabBarInactiveTintColor: C.text2,
             }}
         >
             {/* -------- Home / Index -------- */}
