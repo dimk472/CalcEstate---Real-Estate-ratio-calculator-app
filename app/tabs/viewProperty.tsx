@@ -14,11 +14,15 @@ import {
 } from "react-native";
 import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Radius, Space } from '../Theme';
+import { useTheme } from '../ThemeContext'; // ← πλέον από context
 import { useProperties } from "./properties";
 
 export default function ViewPropertyScreen() {
+    const { colorScheme, C } = useTheme(); // ← αντικατέστησε το useColorScheme
+    const styles = makeStyles(C);
     const insets = useSafeAreaInsets();
-    const { id } = useLocalSearchParams();
+    const { id } = useLocalSearchParams<{ id: string }>();
     const { properties, setProperties } = useProperties();
     const [deletingFieldId, setDeletingFieldId] = useState<string | null>(null);
 
@@ -27,29 +31,44 @@ export default function ViewPropertyScreen() {
     if (!property) {
         return (
             <View style={styles.container}>
-                <StatusBar style="light" />
+                <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+                <LinearGradient
+                    colors={[C.bg0, C.bg1]}
+                    style={StyleSheet.absoluteFill}
+                />
                 <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#FFFFFF" />
+                    <Ionicons name="close" size={24} color={C.text0} />
                 </TouchableOpacity>
-                <Text style={styles.errorText}>Property not found</Text>
+                <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle-outline" size={48} color={C.text3} />
+                    <Text style={styles.errorText}>Property not found</Text>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.errorButton}>
+                        <Text style={styles.errorButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     }
 
     const formatValue = (field: any) => {
-        switch (field.type) {
-            case 'date':
-                return new Date(field.value).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-            case 'boolean':
-                return field.value === 'true' ? 'Yes' : 'No';
-            case 'number':
-                return Number(field.value).toLocaleString();
-            default:
-                return field.value;
+        try {
+            switch (field.type) {
+                case 'date':
+                    return new Date(field.value).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                case 'boolean':
+                    return field.value === 'true' ? 'Yes' : 'No';
+                case 'number':
+                    const num = Number(field.value);
+                    return isNaN(num) ? field.value : num.toLocaleString();
+                default:
+                    return field.value;
+            }
+        } catch {
+            return field.value;
         }
     };
 
@@ -74,7 +93,6 @@ export default function ViewPropertyScreen() {
                     style: "destructive",
                     onPress: () => {
                         setDeletingFieldId(fieldId);
-
                         setProperties((prev) =>
                             prev.map((prop) => {
                                 if (prop.id === property.id) {
@@ -86,7 +104,6 @@ export default function ViewPropertyScreen() {
                                 return prop;
                             })
                         );
-
                         setTimeout(() => setDeletingFieldId(null), 300);
                     }
                 }
@@ -100,16 +117,20 @@ export default function ViewPropertyScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" />
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
 
             <LinearGradient
-                colors={['#000000', '#0A0A0A']}
+                colors={[C.bg0, C.bg1]}
                 style={StyleSheet.absoluteFill}
             />
 
-            <BlurView intensity={80} tint="dark" style={styles.header}>
+            <BlurView
+                intensity={80}
+                tint={colorScheme === 'dark' ? 'dark' : 'light'}
+                style={styles.header}
+            >
                 <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-                    <Ionicons name="chevron-down" size={22} color="#FFFFFF" />
+                    <Ionicons name="chevron-down" size={22} color={C.text0} />
                 </TouchableOpacity>
                 <View style={styles.headerCenter}>
                     <View style={[styles.headerDot, { backgroundColor: property.color }]} />
@@ -128,12 +149,12 @@ export default function ViewPropertyScreen() {
             >
                 <Animated.View entering={SlideInDown.delay(100)} style={styles.heroSection}>
                     <LinearGradient
-                        colors={[`${property.color}20`, 'transparent']}
+                        colors={[`${property.color}20`, C.bg1]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.heroGradient}
                     >
-                        <View style={styles.heroIcon}>
+                        <View style={[styles.heroIcon, { backgroundColor: `${property.color}20` }]}>
                             <Ionicons name="home-outline" size={32} color={property.color} />
                         </View>
                         <Text style={styles.heroTitle}>{property.name}</Text>
@@ -160,8 +181,13 @@ export default function ViewPropertyScreen() {
 
                     {property.dataFields.length === 0 ? (
                         <View style={styles.emptyState}>
-                            <Ionicons name="scan-outline" size={40} color="#333" />
-                            <Text style={styles.emptyText}>No fields added</Text>
+                            <View style={styles.emptyIcon}>
+                                <Ionicons name="layers-outline" size={40} color={C.text3} />
+                            </View>
+                            <Text style={styles.emptyTitle}>No Fields Added</Text>
+                            <Text style={styles.emptyText}>
+                                Add fields to start tracking your property data
+                            </Text>
                         </View>
                     ) : (
                         <View style={styles.fieldsGrid}>
@@ -177,7 +203,7 @@ export default function ViewPropertyScreen() {
                                     <View style={styles.fieldHeader}>
                                         <View style={[styles.fieldIcon, { backgroundColor: `${property.color}15` }]}>
                                             <Ionicons
-                                                name={getFieldIcon(field.type)}
+                                                name={getFieldIcon(field.type) as any}
                                                 size={20}
                                                 color={property.color}
                                             />
@@ -188,7 +214,7 @@ export default function ViewPropertyScreen() {
                                                 {isRatioResult(field) && (
                                                     <View style={[styles.ratioBadge, { backgroundColor: `${property.color}20` }]}>
                                                         <Ionicons name="calculator" size={10} color={property.color} />
-                                                        <Text style={[styles.ratioBadgeText, { color: property.color }]}>Ratio</Text>
+                                                        <Text style={[styles.ratioBadgeText, { color: property.color }]}>Result</Text>
                                                     </View>
                                                 )}
                                                 <Text style={styles.fieldType}>{field.type}</Text>
@@ -200,12 +226,12 @@ export default function ViewPropertyScreen() {
                                             style={styles.deleteButton}
                                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                         >
-                                            <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
+                                            <Ionicons name="trash-outline" size={18} color={C.negative} />
                                         </TouchableOpacity>
                                     </View>
 
                                     <View style={styles.fieldValueContainer}>
-                                        <Text style={styles.fieldValue}>
+                                        <Text style={styles.fieldValue} numberOfLines={3}>
                                             {formatValue(field)}
                                         </Text>
                                     </View>
@@ -219,129 +245,137 @@ export default function ViewPropertyScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: typeof Colors.light | typeof Colors.dark) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#000000",
+        backgroundColor: C.bg0,
     },
     header: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
+        top: 0, left: 0, right: 0,
         zIndex: 100,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingTop: 50,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Space.xl,
+        paddingTop: 54,
         paddingBottom: 16,
     },
     headerButton: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: C.bg2,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: C.border1,
     },
     headerCenter: {
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 8,
     },
     headerDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: 5,
+        height: 5,
+        borderRadius: 2.5,
     },
     headerTitle: {
-        fontSize: 15,
-        fontWeight: "500",
-        color: "#FFFFFF",
+        fontSize: 14,
+        fontWeight: '700',
+        color: C.text0,
         letterSpacing: -0.2,
     },
     content: {
         flex: 1,
-        marginTop: 90,
+        marginTop: 94,
     },
     contentContainer: {
-        padding: 16,
+        paddingHorizontal: Space.xl,
+        paddingBottom: 48,
     },
     heroSection: {
-        marginBottom: 32,
-        borderRadius: 24,
+        marginBottom: 24,
+        borderRadius: Radius.xl,
         overflow: 'hidden',
+        backgroundColor: C.bg1,
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     heroGradient: {
-        padding: 24,
+        padding: Space.xxl,
         alignItems: 'center',
-        borderRadius: 24,
     },
     heroIcon: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: 'rgba(255,255,255,0.03)',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: C.border1,
     },
     heroTitle: {
-        fontSize: 28,
-        fontWeight: "600",
-        color: "#FFFFFF",
-        letterSpacing: -0.5,
+        fontSize: 26,
+        fontWeight: '700',
+        color: C.text0,
+        letterSpacing: -0.9,
         marginBottom: 20,
+        textAlign: 'center',
     },
     heroStats: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 28,
     },
     heroStat: {
         alignItems: 'center',
     },
     heroStatValue: {
-        fontSize: 20,
-        fontWeight: "600",
-        color: "#FFFFFF",
+        fontSize: 21,
+        fontWeight: '700',
+        color: C.text0,
         marginBottom: 4,
+        letterSpacing: -0.5,
     },
     heroStatLabel: {
-        fontSize: 11,
-        color: "#666",
+        fontSize: 10,
+        color: C.text2,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 0.7,
+        fontWeight: '600',
     },
     heroStatDivider: {
         width: 1,
-        height: 30,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        height: 28,
+        backgroundColor: C.border1,
     },
     section: {
-        marginBottom: 20,
+        marginBottom: 18,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#FFFFFF",
-        marginBottom: 16,
-        letterSpacing: -0.3,
+        fontSize: 10,
+        fontWeight: '700',
+        color: C.text2,
+        marginBottom: 12,
+        letterSpacing: 0.9,
+        textTransform: 'uppercase',
     },
     fieldsGrid: {
-        gap: 12,
+        gap: 8,
     },
     fieldCard: {
-        backgroundColor: '#0C0C0C',
-        borderRadius: 16,
-        padding: 16,
+        backgroundColor: C.bg1,
+        borderRadius: Radius.lg,
+        padding: Space.lg,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.03)',
+        borderColor: C.border0,
     },
     fieldCardDeleting: {
-        opacity: 0.5,
-        transform: [{ scale: 0.98 }],
+        opacity: 0.4,
+        transform: [{ scale: 0.97 }],
     },
     fieldHeader: {
         flexDirection: 'row',
@@ -349,9 +383,9 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     fieldIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+        width: 38,
+        height: 38,
+        borderRadius: Radius.xs,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -360,10 +394,11 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     fieldLabel: {
-        fontSize: 16,
-        fontWeight: "500",
-        color: "#FFFFFF",
-        marginBottom: 4,
+        fontSize: 15,
+        fontWeight: '600',
+        color: C.text0,
+        marginBottom: 3,
+        letterSpacing: -0.2,
     },
     fieldMeta: {
         flexDirection: 'row',
@@ -371,66 +406,112 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     fieldType: {
-        fontSize: 11,
-        color: "#666",
+        fontSize: 10,
+        color: C.text2,
         textTransform: 'uppercase',
-        letterSpacing: 0.3,
+        letterSpacing: 0.7,
+        fontWeight: '600',
     },
     ratioBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 6,
+        gap: 3,
+        paddingHorizontal: 7,
         paddingVertical: 2,
-        borderRadius: 4,
+        borderRadius: 6,
     },
     ratioBadgeText: {
-        fontSize: 9,
-        fontWeight: '600',
+        fontSize: 8,
+        fontWeight: '700',
         textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     deleteButton: {
         padding: 8,
+        opacity: 0.7,
     },
     fieldValueContainer: {
-        backgroundColor: 'rgba(255,255,255,0.02)',
-        borderRadius: 12,
+        backgroundColor: C.bg2,
+        borderRadius: Radius.sm,
         padding: 14,
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     fieldValue: {
-        fontSize: 16,
-        color: "#FFFFFF",
+        fontSize: 15,
+        color: C.text0,
         lineHeight: 22,
+        letterSpacing: -0.1,
     },
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 60,
-        backgroundColor: 'rgba(255,255,255,0.02)',
-        borderRadius: 24,
-        gap: 12,
+        backgroundColor: C.bg1,
+        borderRadius: Radius.xl,
+        borderWidth: 1,
+        borderColor: C.border0,
+    },
+    emptyIcon: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: C.bg2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: C.border1,
+    },
+    emptyTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: C.text0,
+        marginBottom: 6,
+        letterSpacing: -0.3,
     },
     emptyText: {
-        fontSize: 14,
-        color: "#333",
-        fontWeight: "500",
+        fontSize: 13,
+        color: C.text2,
+        textAlign: 'center',
+        paddingHorizontal: 40,
+        lineHeight: 19,
+    },
+    errorContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 40,
     },
     errorText: {
+        fontSize: 16,
+        color: C.text1,
+        textAlign: 'center',
+        marginTop: 16,
+        marginBottom: 24,
+    },
+    errorButton: {
+        backgroundColor: C.accent,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: Radius.full,
+    },
+    errorButtonText: {
         fontSize: 14,
-        color: "#666",
-        textAlign: "center",
-        marginTop: 20,
+        color: '#FFFFFF',
+        fontWeight: '600',
     },
     closeButton: {
         position: 'absolute',
-        top: 50,
-        right: 20,
+        top: 54, right: 20,
         zIndex: 100,
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: C.bg2,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: C.border1,
     },
 });
