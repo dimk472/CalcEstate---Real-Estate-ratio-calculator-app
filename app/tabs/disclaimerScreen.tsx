@@ -5,23 +5,26 @@ import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../ThemeContext';
 
 export default function DisclaimerScreen() {
     const insets = useSafeAreaInsets();
+    const { C, isDark } = useTheme();
+    const styles = makeStyles(C);
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" />
+            <StatusBar style={isDark ? 'light' : 'dark'} />
 
             <LinearGradient
-                colors={['#000000', '#0A0A0A']}
+                colors={[C.bg0, C.bg1]}
                 style={StyleSheet.absoluteFill}
             />
 
             {/* Simple Header */}
             <View style={[styles.header, { paddingTop: 50 + insets.top }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="chevron-down" size={22} color="#FFFFFF" />
+                    <Ionicons name="chevron-down" size={22} color={C.text0} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Legal</Text>
                 <View style={{ width: 40 }} />
@@ -38,7 +41,7 @@ export default function DisclaimerScreen() {
                 <Animated.View entering={FadeIn.duration(400)} style={styles.card}>
                     {/* Warning Icon */}
                     <View style={styles.warningIcon}>
-                        <Ionicons name="shield-outline" size={48} color="#4F46E5" />
+                        <Ionicons name="shield-outline" size={48} color={C.accent} />
                     </View>
 
                     <Text style={styles.title}>Legal Information</Text>
@@ -46,7 +49,7 @@ export default function DisclaimerScreen() {
                     {/* Terms of Use Section */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Ionicons name="document-text-outline" size={24} color="#4F46E5" />
+                            <Ionicons name="document-text-outline" size={24} color={C.accent} />
                             <Text style={styles.sectionTitle}>Terms of Use</Text>
                         </View>
 
@@ -86,7 +89,7 @@ export default function DisclaimerScreen() {
                     {/* Privacy Policy Section */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Ionicons name="lock-closed-outline" size={24} color="#4F46E5" />
+                            <Ionicons name="lock-closed-outline" size={24} color={C.accent} />
                             <Text style={styles.sectionTitle}>Privacy Policy</Text>
                         </View>
 
@@ -178,7 +181,7 @@ export default function DisclaimerScreen() {
                         onPress={() => router.back()}
                     >
                         <LinearGradient
-                            colors={['#4F46E5', '#6366F1']}
+                            colors={[C.accent, C.accent]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={styles.agreeButtonGradient}
@@ -200,10 +203,10 @@ export default function DisclaimerScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#000000",
+        backgroundColor: C.bg0,
     },
     header: {
         position: 'absolute',
@@ -221,14 +224,16 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: C.bg2,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: C.border0,
     },
     headerTitle: {
         fontSize: 17,
         fontWeight: '500',
-        color: '#FFFFFF',
+        color: C.text0,
         letterSpacing: -0.2,
     },
     scrollView: {
@@ -239,11 +244,11 @@ const styles = StyleSheet.create({
         paddingTop: 100,
     },
     card: {
-        backgroundColor: '#0C0C0C',
+        backgroundColor: C.bg1,
         borderRadius: 24,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.03)',
+        borderColor: C.border0,
     },
     warningIcon: {
         alignItems: 'center',
@@ -252,7 +257,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: C.text0,
         textAlign: 'center',
         marginBottom: 30,
         letterSpacing: -0.5,
@@ -266,13 +271,13 @@ const styles = StyleSheet.create({
         gap: 10,
         marginBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: C.border0,
         paddingBottom: 12,
     },
     sectionTitle: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#FFFFFF',
+        color: C.text0,
         letterSpacing: -0.3,
     },
     subSection: {
@@ -281,12 +286,12 @@ const styles = StyleSheet.create({
     subSectionTitle: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#4F46E5',
+        color: C.accent,
         marginBottom: 8,
     },
     text: {
         fontSize: 14,
-        color: '#AAAAAA',
+        color: C.text1,
         lineHeight: 22,
         fontWeight: '400',
     },
@@ -297,17 +302,17 @@ const styles = StyleSheet.create({
     },
     bulletPoint: {
         fontSize: 14,
-        color: '#AAAAAA',
+        color: C.text1,
         lineHeight: 22,
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: C.border0,
         marginVertical: 24,
     },
     agreementText: {
         fontSize: 15,
-        color: '#FFFFFF',
+        color: C.text0,
         lineHeight: 24,
         fontWeight: '500',
         textAlign: 'center',
@@ -324,12 +329,12 @@ const styles = StyleSheet.create({
     },
     agreeButtonText: {
         fontSize: 16,
-        color: '#FFFFFF',
+        color: C.bg0,
         fontWeight: '600',
     },
     dateText: {
         fontSize: 12,
-        color: '#666',
+        color: C.text2,
         textAlign: 'center',
     },
 });
