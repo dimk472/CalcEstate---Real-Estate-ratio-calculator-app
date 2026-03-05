@@ -19,9 +19,11 @@ import Animated, {
   SlideInDown,
   SlideInRight,
   SlideOutDown,
-  SlideOutLeft
+  SlideOutLeft,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Radius, Space } from '../Theme';
+import { useTheme } from '../ThemeContext';
 
 const STORAGE_KEY = "@calcestate_properties";
 
@@ -40,24 +42,46 @@ export interface DataField {
   type: "text" | "number" | "date" | "boolean";
 }
 
+// ─── useProperties hook with event emitter ─────────────────────────
+
+// Simple event emitter for cross-component communication
+const propertyEvents = {
+  listeners: new Set<() => void>(),
+  emit: () => {
+    propertyEvents.listeners.forEach(listener => listener());
+  },
+  subscribe: (listener: () => void) => {
+    propertyEvents.listeners.add(listener);
+    return () => {
+      propertyEvents.listeners.delete(listener);
+    };
+  }
+};
+
 export const useProperties = () => {
   const [properties, setProperties] = useState<CustomProperty[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [updateTrigger, setUpdateTrigger] = useState(0);
 
   useEffect(() => {
     loadProperties();
+  }, []);
+
+  useEffect(() => {
+    // Subscribe to external updates (from CalculatorScreen)
+    const unsubscribe = propertyEvents.subscribe(() => {
+      loadProperties();
+      setUpdateTrigger(prev => prev + 1);
+    });
+
+    return unsubscribe;
   }, []);
 
   const loadProperties = async () => {
     try {
       setIsLoading(true);
       const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
-      if (jsonValue !== null) {
-        const loadedProperties = JSON.parse(jsonValue);
-        setProperties(loadedProperties);
-      } else {
-        setProperties([]);
-      }
+      setProperties(jsonValue !== null ? JSON.parse(jsonValue) : []);
     } catch (error) {
       console.error("Error loading properties:", error);
     } finally {
@@ -67,27 +91,32 @@ export const useProperties = () => {
 
   const saveProperties = async (newProperties: CustomProperty[]) => {
     try {
-      const jsonValue = JSON.stringify(newProperties);
-      await AsyncStorage.setItem(STORAGE_KEY, jsonValue);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newProperties));
+      setProperties(newProperties);
+      setUpdateTrigger(prev => prev + 1);
+
+      // Notify other components (like CalculatorScreen) that properties changed
+      propertyEvents.emit();
     } catch (error) {
       console.error("Error saving properties:", error);
     }
   };
 
   const setAndSaveProperties = (
-    newProperties:
-      | CustomProperty[]
-      | ((prev: CustomProperty[]) => CustomProperty[]),
+    newProperties: CustomProperty[] | ((prev: CustomProperty[]) => CustomProperty[])
   ) => {
     setProperties((prev) => {
-      const updated =
-        typeof newProperties === "function"
-          ? newProperties(prev)
-          : newProperties;
+      const updated = typeof newProperties === "function" ? newProperties(prev) : newProperties;
       saveProperties(updated);
       return updated;
     });
   };
+
+  // Function to manually refresh (useful for pull-to-refresh)
+  const refresh = useCallback(() => {
+    loadProperties();
+    setUpdateTrigger(prev => prev + 1);
+  }, []);
 
   return {
     properties,
@@ -95,27 +124,59 @@ export const useProperties = () => {
     isLoading,
     loadProperties,
     saveProperties,
+    refresh,
+    updateTrigger
   };
 };
 
-const COLOR_PALETTE = [
-  "#6366F1", "#EF4444", "#F59E0B", "#10B981", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"
+// Export function for other screens to trigger refresh
+export const refreshAllProperties = () => {
+  propertyEvents.emit();
+};
+
+// ─── Color Palette ────────────────────────────────────────────────
+
+export const COLOR_PALETTE = [
+  "#E8613C", // Vermillion
+  "#3B82F6", // Azure
+  "#F0A500", // Amber
+  "#22C55E", // Emerald
+  "#A855F7", // Violet
+  "#0EA5E9", // Sky
+  "#F43F5E", // Rose
+  "#14B8A6", // Teal
+  "#EAB308", // Gold
+  "#6366F1", // Indigo
+  "#EC4899", // Fuchsia
+  "#10B981", // Jade
 ];
+
+// ─── Screen ───────────────────────────────────────────────────────
 
 export default function PropertiesScreen() {
   const insets = useSafeAreaInsets();
-  const { properties, setProperties, loadProperties, isLoading } = useProperties();
+  const { colorScheme, C, isDark } = useTheme();
+  const styles = makeStyles(C, isDark);
+
+  const { properties, setProperties, isLoading, refresh, updateTrigger } = useProperties();
   const [modalVisible, setModalVisible] = useState(false);
   const [dataModalVisible, setDataModalVisible] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<CustomProperty | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      setRefreshKey((prev) => prev + 1);
+      refresh();
+      setRefreshKey(prev => prev + 1);
     }, [])
   );
+
+  // Also refresh when updateTrigger changes
+  useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [updateTrigger]);
 
   const [newPropertyName, setNewPropertyName] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLOR_PALETTE[0]);
@@ -154,17 +215,11 @@ export default function PropertiesScreen() {
     if (!newPropertyName.trim()) return;
 
     if (isEditMode && selectedProperty) {
-      setProperties((prev) =>
-        prev.map((prop) => {
-          if (prop.id === selectedProperty.id) {
-            return {
-              ...prop,
-              name: newPropertyName,
-              color: selectedColor,
-            };
-          }
-          return prop;
-        }),
+      setProperties(prev =>
+        prev.map(p => p.id === selectedProperty.id
+          ? { ...p, name: newPropertyName, color: selectedColor }
+          : p
+        )
       );
     } else {
       const newProperty: CustomProperty = {
@@ -174,8 +229,7 @@ export default function PropertiesScreen() {
         createdAt: Date.now(),
         dataFields: [],
       };
-
-      setProperties((prev) => [newProperty, ...prev]);
+      setProperties(prev => [newProperty, ...prev]);
     }
 
     resetPropertyForm();
@@ -192,16 +246,11 @@ export default function PropertiesScreen() {
       type: fieldType,
     };
 
-    setProperties((prev) =>
-      prev.map((prop) => {
-        if (prop.id === selectedProperty.id) {
-          return {
-            ...prop,
-            dataFields: [...prop.dataFields, newField],
-          };
-        }
-        return prop;
-      }),
+    setProperties(prev =>
+      prev.map(p => p.id === selectedProperty.id
+        ? { ...p, dataFields: [...p.dataFields, newField] }
+        : p
+      )
     );
 
     setFieldLabel("");
@@ -211,20 +260,15 @@ export default function PropertiesScreen() {
   };
 
   const deleteProperty = (propertyId: string) => {
-    setProperties((prev) => prev.filter((p) => p.id !== propertyId));
+    setProperties(prev => prev.filter(p => p.id !== propertyId));
   };
 
   const deleteDataField = (propertyId: string, fieldId: string) => {
-    setProperties((prev) =>
-      prev.map((prop) => {
-        if (prop.id === propertyId) {
-          return {
-            ...prop,
-            dataFields: prop.dataFields.filter((f) => f.id !== fieldId),
-          };
-        }
-        return prop;
-      }),
+    setProperties(prev =>
+      prev.map(p => p.id === propertyId
+        ? { ...p, dataFields: p.dataFields.filter(f => f.id !== fieldId) }
+        : p
+      )
     );
   };
 
@@ -241,24 +285,27 @@ export default function PropertiesScreen() {
   const formatPreviewValue = (field: DataField) => {
     switch (field.type) {
       case 'date':
-        return new Date(field.value).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric'
-        });
+        try {
+          return new Date(field.value).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric'
+          });
+        } catch {
+          return field.value;
+        }
       case 'boolean':
         return field.value === 'true' ? 'Yes' : 'No';
       case 'number':
-        return Number(field.value).toLocaleString();
+        const num = Number(field.value);
+        return isNaN(num) ? field.value : num.toLocaleString();
       default:
         return field.value.length > 20 ? field.value.substring(0, 20) + '...' : field.value;
     }
   };
 
   const getTimeAgo = (timestamp: number) => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
+    const diff = Date.now() - timestamp;
+    const days = Math.floor(diff / 86400000);
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days} days ago`;
@@ -279,21 +326,20 @@ export default function PropertiesScreen() {
               <Text style={styles.propertyName}>{item.name}</Text>
               <Text style={styles.timeAgo}>{getTimeAgo(item.createdAt)}</Text>
             </View>
-
             <View style={styles.actionChips}>
               <TouchableOpacity
                 onPress={() => openEditModal(item)}
                 style={styles.actionChip}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="create-outline" size={16} color="#888" />
+                <Ionicons name="create-outline" size={16} color={C.text2} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => deleteProperty(item.id)}
                 style={styles.actionChip}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                <Ionicons name="trash-outline" size={16} color={C.negative} />
               </TouchableOpacity>
             </View>
           </View>
@@ -301,14 +347,13 @@ export default function PropertiesScreen() {
 
         {item.dataFields.length > 0 ? (
           <View style={styles.chipsContainer}>
-            {item.dataFields.slice(0, 3).map((field) => (
-              <View key={field.id} style={[styles.chip, { backgroundColor: `${item.color}10` }]}>
-                <Ionicons name={getFieldIcon(field.type)} size={12} color={item.color} />
+            {item.dataFields.slice(0, 3).map(field => (
+              <View key={field.id} style={[styles.chip, { backgroundColor: `${item.color}18` }]}>
+                <Ionicons name={getFieldIcon(field.type) as any} size={12} color={item.color} />
                 <Text style={[styles.chipLabel, { color: item.color }]}>{field.label}</Text>
-                <Text style={styles.chipValue}>• {formatPreviewValue(field)}</Text>
+                <Text style={styles.chipValue}>· {formatPreviewValue(field)}</Text>
               </View>
             ))}
-
             {item.dataFields.length > 3 && (
               <View style={styles.moreChip}>
                 <Text style={styles.moreChipText}>+{item.dataFields.length - 3}</Text>
@@ -323,12 +368,11 @@ export default function PropertiesScreen() {
 
         <View style={styles.cardFooter}>
           <View style={styles.stat}>
-            <Ionicons name="layers-outline" size={14} color="#666" />
+            <Ionicons name="layers-outline" size={14} color={C.text2} />
             <Text style={styles.statText}>
               {item.dataFields.length} {item.dataFields.length === 1 ? 'field' : 'fields'}
             </Text>
           </View>
-
           <TouchableOpacity
             onPress={() => {
               setSelectedProperty(item);
@@ -336,7 +380,7 @@ export default function PropertiesScreen() {
             }}
             style={styles.addChip}
           >
-            <Ionicons name="add" size={14} color="#4F46E5" />
+            <Ionicons name="add" size={14} color={isDark ? C.bg0 : C.bg1} />
             <Text style={styles.addChipText}>Add Field</Text>
           </TouchableOpacity>
         </View>
@@ -344,17 +388,15 @@ export default function PropertiesScreen() {
     </Animated.View>
   );
 
+  // ─── Loading ─────────────────────────────────────────────────
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <StatusBar style="light" />
-        <LinearGradient
-          colors={['#000000', '#0A0A0A']}
-          style={StyleSheet.absoluteFill}
-        />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <LinearGradient colors={[C.bg0, C.bg1]} style={StyleSheet.absoluteFill} />
         <Animated.View entering={FadeIn} style={styles.loaderContainer}>
           <View style={styles.loaderPulse}>
-            <Ionicons name="home-outline" size={40} color="#333" />
+            <Ionicons name={isDark ? 'moon' : 'sunny'} size={28} color={C.text2} />
           </View>
           <Text style={styles.loadingText}>Loading properties...</Text>
         </Animated.View>
@@ -362,20 +404,18 @@ export default function PropertiesScreen() {
     );
   }
 
+  // ─── Main ────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <LinearGradient colors={[C.bg0, C.bg1]} style={StyleSheet.absoluteFill} />
 
-      <LinearGradient
-        colors={['#000000', '#0A0A0A']}
-        style={StyleSheet.absoluteFill}
-      />
-
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Properties</Text>
           <TouchableOpacity onPress={openCreateModal} style={styles.createButton}>
-            <Ionicons name="add" size={22} color="#FFFFFF" />
+            <Ionicons name="add" size={22} color={isDark ? C.bg0 : C.bg1} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerStats}>
@@ -393,25 +433,21 @@ export default function PropertiesScreen() {
         </View>
       </View>
 
+      {/* Empty state */}
       {properties.length === 0 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIllustration}>
-            <Ionicons name="home-outline" size={48} color="#333" />
+            <Ionicons name="home-outline" size={48} color={C.text3} />
           </View>
           <Text style={styles.emptyTitle}>No Properties Yet</Text>
           <Text style={styles.emptySubtitle}>
             Create your first property to start organizing your real estate data
           </Text>
           <TouchableOpacity onPress={openCreateModal} style={styles.emptyButton}>
-            <LinearGradient
-              colors={['#4F46E5', '#6366F1']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.emptyButtonGradient}
-            >
-              <Ionicons name="add" size={18} color="#FFFFFF" />
+            <View style={styles.emptyButtonInner}>
+              <Ionicons name="add" size={18} color={isDark ? C.bg0 : C.bg1} />
               <Text style={styles.emptyButtonText}>Create Property</Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
       ) : (
@@ -419,32 +455,29 @@ export default function PropertiesScreen() {
           key={refreshKey}
           data={properties}
           renderItem={renderPropertyCard}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: 90 + (insets.bottom > 0 ? insets.bottom : 0) }
           ]}
           showsVerticalScrollIndicator={false}
           extraData={properties}
+          refreshing={isLoading}
+          onRefresh={refresh}
         />
       )}
 
+      {/* ─── Create / Edit Modal ─────────────────────────────── */}
       <Modal
         animationType="none"
-        transparent={true}
+        transparent
         visible={modalVisible}
-        onRequestClose={() => {
-          resetPropertyForm();
-          setModalVisible(false);
-        }}
+        onRequestClose={() => { resetPropertyForm(); setModalVisible(false); }}
       >
         <View style={styles.modalOverlay}>
           <Pressable
             style={styles.modalBackdrop}
-            onPress={() => {
-              resetPropertyForm();
-              setModalVisible(false);
-            }}
+            onPress={() => { resetPropertyForm(); setModalVisible(false); }}
           />
           <Animated.View
             entering={SlideInDown.duration(350)}
@@ -457,13 +490,10 @@ export default function PropertiesScreen() {
                 {isEditMode ? "Edit Property" : "New Property"}
               </Text>
               <TouchableOpacity
-                onPress={() => {
-                  resetPropertyForm();
-                  setModalVisible(false);
-                }}
+                onPress={() => { resetPropertyForm(); setModalVisible(false); }}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={20} color="#888" />
+                <Ionicons name="close" size={20} color={C.text2} />
               </TouchableOpacity>
             </View>
 
@@ -473,16 +503,15 @@ export default function PropertiesScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., Beach House"
-                  placeholderTextColor="#444"
+                  placeholderTextColor={C.text3}
                   value={newPropertyName}
                   onChangeText={setNewPropertyName}
                 />
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Color</Text>
                 <View style={styles.colorGrid}>
-                  {COLOR_PALETTE.map((color) => (
+                  {COLOR_PALETTE.map(color => (
                     <TouchableOpacity
                       key={color}
                       style={[
@@ -500,10 +529,7 @@ export default function PropertiesScreen() {
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  resetPropertyForm();
-                  setModalVisible(false);
-                }}
+                onPress={() => { resetPropertyForm(); setModalVisible(false); }}
               >
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -511,25 +537,17 @@ export default function PropertiesScreen() {
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={saveProperty}
               >
-                <LinearGradient
-                  colors={['#4F46E5', '#6366F1']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.saveButtonGradient}
-                >
-                  <Text style={styles.saveText}>
-                    {isEditMode ? "Save" : "Create"}
-                  </Text>
-                </LinearGradient>
+                <Text style={styles.saveText}>{isEditMode ? "Save" : "Create"}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
         </View>
       </Modal>
 
+      {/* ─── Add Field Modal ─────────────────────────────────── */}
       <Modal
         animationType="none"
-        transparent={true}
+        transparent
         visible={dataModalVisible}
         onRequestClose={() => {
           setDataModalVisible(false);
@@ -553,9 +571,7 @@ export default function PropertiesScreen() {
           >
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Add Field to {selectedProperty?.name}
-              </Text>
+              <Text style={styles.modalTitle}>Add Field to {selectedProperty?.name}</Text>
               <TouchableOpacity
                 onPress={() => {
                   setDataModalVisible(false);
@@ -564,7 +580,7 @@ export default function PropertiesScreen() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={20} color="#888" />
+                <Ionicons name="close" size={20} color={C.text2} />
               </TouchableOpacity>
             </View>
 
@@ -574,33 +590,31 @@ export default function PropertiesScreen() {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., Purchase Price"
-                  placeholderTextColor="#444"
+                  placeholderTextColor={C.text3}
                   value={fieldLabel}
                   onChangeText={setFieldLabel}
                 />
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Value</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="Enter value"
-                  placeholderTextColor="#444"
+                  placeholderTextColor={C.text3}
                   value={fieldValue}
                   onChangeText={setFieldValue}
+                  multiline={fieldType === 'text'}
+                  numberOfLines={fieldType === 'text' ? 3 : 1}
+                  keyboardType={fieldType === 'number' ? 'numeric' : 'default'}
                 />
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Type</Text>
                 <View style={styles.typeGrid}>
-                  {(["text", "number", "date", "boolean"] as const).map((type) => (
+                  {(["text", "number", "date", "boolean"] as const).map(type => (
                     <TouchableOpacity
                       key={type}
-                      style={[
-                        styles.typeChip,
-                        fieldType === type && styles.typeChipSelected,
-                      ]}
+                      style={[styles.typeChip, fieldType === type && styles.typeChipSelected]}
                       onPress={() => setFieldType(type)}
                     >
                       <Ionicons
@@ -610,11 +624,11 @@ export default function PropertiesScreen() {
                               type === 'date' ? 'calendar-outline' : 'checkbox-outline'
                         }
                         size={14}
-                        color={fieldType === type ? '#4F46E5' : '#666'}
+                        color={fieldType === type ? (isDark ? C.bg0 : C.bg1) : C.text2}
                       />
                       <Text style={[
                         styles.typeChipText,
-                        fieldType === type && styles.typeChipTextSelected
+                        fieldType === type && styles.typeChipTextSelected,
                       ]}>
                         {type}
                       </Text>
@@ -639,14 +653,7 @@ export default function PropertiesScreen() {
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={addDataField}
               >
-                <LinearGradient
-                  colors={['#4F46E5', '#6366F1']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.saveButtonGradient}
-                >
-                  <Text style={styles.saveText}>Add Field</Text>
-                </LinearGradient>
+                <Text style={styles.saveText}>Add Field</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -656,408 +663,305 @@ export default function PropertiesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000000",
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+// ─── Styles ───────────────────────────────────────────────────────
 
-  loaderContainer: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  loaderPulse: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: "#666",
-    fontSize: 14,
-  },
+const makeStyles = (C: any, isDark: boolean) => {
+  // CTA text color — bg0 on dark (near-black text on white button),
+  // bg1 on light (white text on near-black button)
+  const ctaText = isDark ? C.bg0 : C.bg1;
 
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  createButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  headerStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 20,
-    padding: 16,
-  },
-  headerStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerStatValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  headerStatLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  headerStatDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.bg0 },
+    centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  list: {
-    padding: 16,
-    paddingTop: 0,
-  },
+    // Loader
+    loaderContainer: { alignItems: 'center', gap: Space.lg },
+    loaderPulse: {
+      width: 64, height: 64, borderRadius: 32,
+      backgroundColor: C.bg2, justifyContent: 'center', alignItems: 'center',
+      borderWidth: 1, borderColor: C.border1,
+    },
+    loadingText: { color: C.text3, fontSize: 13, letterSpacing: 0.2 },
 
-  card: {
-    marginBottom: 12,
-    borderRadius: 20,
-    backgroundColor: '#0C0C0C',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.03)',
-    overflow: 'hidden',
-  },
-  cardPressable: {
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  colorBar: {
-    width: 4,
-    height: 46,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  cardHeaderContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  titleSection: {
-    flex: 1,
-  },
-  propertyName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: '#666',
-  },
-  actionChips: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionChip: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
-  },
-  chipLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  chipValue: {
-    fontSize: 12,
-    color: '#888',
-  },
-  moreChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-  },
-  moreChipText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  emptyFieldsPreview: {
-    marginBottom: 16,
-    paddingVertical: 8,
-  },
-  emptyFieldsPreviewText: {
-    fontSize: 13,
-    color: '#444',
-    fontStyle: 'italic',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.03)',
-  },
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statText: {
-    fontSize: 13,
-    color: '#666',
-  },
-  addChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(79,70,229,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  addChipText: {
-    fontSize: 12,
-    color: '#4F46E5',
-    fontWeight: '500',
-  },
+    // Header
+    header: { paddingTop: 64, paddingHorizontal: Space.xl, paddingBottom: Space.xxl },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Space.xxl
+    },
+    headerTitle: {
+      fontSize: 30,
+      fontWeight: '700',
+      color: C.text0,
+      letterSpacing: -1.0
+    },
+    createButton: {
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: C.accent,
+      justifyContent: 'center', alignItems: 'center',
+    },
 
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-  },
-  emptyIllustration: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.03)',
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  emptyButton: {
-    borderRadius: 30,
-    overflow: 'hidden',
-  },
-  emptyButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    gap: 8,
-  },
-  emptyButtonText: {
-    fontSize: 15,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
+    // Stats bar
+    headerStats: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: C.bg1, borderRadius: Radius.lg,
+      padding: Space.lg, borderWidth: 1, borderColor: C.border1,
+    },
+    headerStat: { flex: 1, alignItems: 'center' },
+    headerStatValue: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: C.text0,
+      marginBottom: 3,
+      letterSpacing: -0.6
+    },
+    headerStatLabel: {
+      fontSize: 10,
+      color: C.text2,
+      textTransform: 'uppercase',
+      letterSpacing: 0.7,
+      fontWeight: '600'
+    },
+    headerStatDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: C.border1
+    },
 
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-  modalContent: {
-    backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 20,
-    paddingBottom: 30,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    letterSpacing: -0.3,
-  },
-  modalCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBody: {
-    marginBottom: 24,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 13,
-    color: "#888",
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 14,
-    padding: 16,
-    fontSize: 15,
-    color: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  colorGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  colorSwatch: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  colorSwatchSelected: {
-    borderColor: "#FFFFFF",
-    transform: [{ scale: 1.1 }],
-  },
-  typeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  typeChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  typeChipSelected: {
-    backgroundColor: 'rgba(79,70,229,0.1)',
-    borderColor: '#4F46E5',
-  },
-  typeChipText: {
-    fontSize: 13,
-    color: "#888",
-    textTransform: "capitalize",
-  },
-  typeChipTextSelected: {
-    color: "#4F46E5",
-    fontWeight: "500",
-  },
-  modalFooter: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  cancelButton: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  cancelText: {
-    fontSize: 15,
-    color: "#888",
-    fontWeight: "500",
-  },
-  saveButton: {
-    overflow: 'hidden',
-  },
-  saveButtonGradient: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  saveText: {
-    fontSize: 15,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-});
+    // List
+    list: { paddingHorizontal: Space.xl, paddingTop: 4 },
+
+    // Card
+    card: {
+      marginBottom: 8, borderRadius: Radius.xl,
+      backgroundColor: C.bg1, borderWidth: 1, borderColor: C.border1, overflow: 'hidden',
+    },
+    cardPressable: { padding: Space.lg },
+    cardHeader: { flexDirection: 'row', marginBottom: Space.md },
+    colorBar: { width: 3, height: 44, borderRadius: 2, marginRight: Space.md },
+    cardHeaderContent: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    },
+    titleSection: { flex: 1 },
+    propertyName: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: C.text0,
+      marginBottom: 4,
+      letterSpacing: -0.4
+    },
+    timeAgo: { fontSize: 12, color: C.text2 },
+    actionChips: { flexDirection: 'row', gap: 6 },
+    actionChip: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: C.bg3, justifyContent: 'center', alignItems: 'center',
+      borderWidth: 1, borderColor: C.border1,
+    },
+
+    // Field chips
+    chipsContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginBottom: Space.md
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: Radius.xs,
+      gap: 4
+    },
+    chipLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.1 },
+    chipValue: { fontSize: 11, color: C.text1 },
+    moreChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: Radius.xs,
+      backgroundColor: C.bg3,
+      borderWidth: 1,
+      borderColor: C.border1
+    },
+    moreChipText: { fontSize: 11, color: C.text2 },
+    emptyFieldsPreview: { marginBottom: Space.md, paddingVertical: 6 },
+    emptyFieldsPreviewText: { fontSize: 13, color: C.text3, fontStyle: 'italic' },
+
+    // Card footer
+    cardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: C.border0
+    },
+    stat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    statText: { fontSize: 12, color: C.text2 },
+    addChip: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: C.accent,
+      paddingHorizontal: 12, paddingVertical: 7,
+      borderRadius: Radius.full, gap: 5,
+    },
+    addChipText: {
+      fontSize: 11,
+      color: ctaText,
+      fontWeight: '700',
+      letterSpacing: 0.1
+    },
+
+    // Empty state
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 40
+    },
+    emptyIllustration: {
+      width: 80, height: 80, borderRadius: 40,
+      backgroundColor: C.bg2,
+      justifyContent: 'center', alignItems: 'center',
+      marginBottom: 22,
+      borderWidth: 1, borderColor: C.border1,
+    },
+    emptyTitle: {
+      fontSize: 19,
+      fontWeight: '700',
+      color: C.text0,
+      marginBottom: 6,
+      letterSpacing: -0.4
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: C.text1,
+      textAlign: 'center',
+      marginBottom: 28,
+      lineHeight: 20
+    },
+    emptyButton: { borderRadius: Radius.full, overflow: 'hidden' },
+    emptyButtonInner: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: 24, paddingVertical: 14, gap: 8,
+      backgroundColor: C.accent, borderRadius: Radius.full,
+    },
+    emptyButtonText: {
+      fontSize: 14,
+      color: ctaText,
+      fontWeight: '700',
+      letterSpacing: -0.1
+    },
+
+    // Modal
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: C.overlay },
+    modalContent: {
+      backgroundColor: C.bg2,
+      borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl,
+      padding: Space.xxl, paddingBottom: 36,
+      borderWidth: 1, borderColor: C.border1, borderBottomWidth: 0,
+    },
+    modalHandle: {
+      width: 36,
+      height: 3,
+      backgroundColor: C.border2,
+      borderRadius: 2,
+      alignSelf: 'center',
+      marginBottom: 22
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Space.xxl
+    },
+    modalTitle: {
+      fontSize: 19,
+      fontWeight: '700',
+      color: C.text0,
+      letterSpacing: -0.5
+    },
+    modalCloseButton: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: C.bg3, justifyContent: 'center', alignItems: 'center',
+      borderWidth: 1, borderColor: C.border1,
+    },
+    modalBody: { marginBottom: Space.xxl },
+    inputGroup: { marginBottom: Space.xxl },
+    inputLabel: {
+      fontSize: 10,
+      color: C.text2,
+      marginBottom: 9,
+      textTransform: 'uppercase',
+      letterSpacing: 0.9,
+      fontWeight: '700'
+    },
+    input: {
+      backgroundColor: C.bg3, borderRadius: Radius.md, padding: 15,
+      fontSize: 15, color: C.text0, borderWidth: 1, borderColor: C.border1,
+      letterSpacing: -0.1,
+    },
+
+    // Color picker
+    colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    colorSwatch: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 2.5,
+      borderColor: 'transparent'
+    },
+    colorSwatchSelected: {
+      borderColor: C.text0,
+      transform: [{ scale: 1.1 }]
+    },
+
+    // Type chips
+    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    typeChip: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 6, paddingVertical: 12, borderRadius: Radius.sm,
+      backgroundColor: C.bg3, borderWidth: 1, borderColor: C.border1,
+    },
+    typeChipSelected: {
+      backgroundColor: C.accent,
+      borderColor: C.accent
+    },
+    typeChipText: {
+      fontSize: 13,
+      color: C.text1,
+      textTransform: 'capitalize',
+      letterSpacing: 0.1
+    },
+    typeChipTextSelected: {
+      color: ctaText,
+      fontWeight: '700'
+    },
+
+    // Modal footer
+    modalFooter: { flexDirection: 'row', gap: 10 },
+    modalButton: { flex: 1, borderRadius: Radius.md, overflow: 'hidden' },
+    cancelButton: {
+      backgroundColor: C.bg3, justifyContent: 'center', alignItems: 'center',
+      paddingVertical: 15, borderRadius: Radius.md,
+      borderWidth: 1, borderColor: C.border1,
+    },
+    cancelText: { fontSize: 14, color: C.text1, fontWeight: '600' },
+    saveButton: {
+      backgroundColor: C.accent,
+      justifyContent: 'center', alignItems: 'center',
+      paddingVertical: 15, borderRadius: Radius.md,
+    },
+    saveText: {
+      fontSize: 14,
+      color: ctaText,
+      fontWeight: '700',
+      letterSpacing: -0.1
+    },
+  });
+};
